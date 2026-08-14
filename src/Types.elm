@@ -7,20 +7,19 @@ module Types exposing
     , ToFrontend(..)
     )
 
-import Browser exposing (UrlRequest)
-import Browser.Navigation
+import Camera exposing (Camera)
 import Keyboard
 import Player exposing (Player)
 import Tileset exposing (Tileset)
-import Url exposing (Url)
 import WebGL.Texture exposing (Texture)
 
 
 type alias FrontendModel =
     { tileset : Maybe Texture
     , keys : List Keyboard.Key
-    , time : Float
+    , timeMs : Float
     , player : Player
+    , camera : Camera
     }
 
 

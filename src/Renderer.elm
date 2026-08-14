@@ -1,5 +1,6 @@
 module Renderer exposing (Tile, tile, tileToWebGLEntity)
 
+import Camera
 import Math.Matrix4 as Mat4 exposing (Mat4)
 import Math.Vector2 as Vec2 exposing (Vec2)
 import Tileset
@@ -27,13 +28,14 @@ blend =
 
 
 tileToWebGLEntity : Tileset.LoadedTileset -> Mat4 -> Tile -> Entity
-tileToWebGLEntity tileset mapProjection t =
+tileToWebGLEntity tileset cameraTranslateMatrix t =
     WebGL.entityWith
         blend
         vertexShader
         fragmentShader
         quadMesh
-        { projection = mapProjection
+        { projection = Camera.projection
+        , view = cameraTranslateMatrix
         , model = Mat4.makeTranslate3 (toFloat t.sceneX) (toFloat t.sceneY) 0
         , texture = tileset
         , tileCoord = t.tileCoord
@@ -97,6 +99,7 @@ quadMesh =
 
 type alias Uniforms =
     { projection : Mat4
+    , view : Mat4
     , model : Mat4
     , texture : Texture
     , tileCoord : Vec2
@@ -126,6 +129,7 @@ vertexShader =
         attribute vec2 position;
 
         uniform mat4 projection;
+        uniform mat4 view;
         uniform mat4 model;
         uniform vec2 tileCoord;
         uniform vec2 tileSizeUV;
@@ -137,7 +141,7 @@ vertexShader =
                 (tileCoord.x + position.x) * tileSizeUV.x,
                 (tileCoord.y + position.y) * tileSizeUV.y
             );
-            gl_Position = projection * model * vec4(position, 0.0, 1.0);
+            gl_Position = projection * view * model * vec4(position, 0.0, 1.0);
         }
     |]
 

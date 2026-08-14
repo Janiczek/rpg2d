@@ -1,8 +1,9 @@
 module Frontend exposing (Model, app)
 
-import Browser exposing (UrlRequest(..))
+import Browser
 import Browser.Events
 import Browser.Navigation as Nav
+import Camera
 import Html exposing (Html)
 import Html.Attributes
 import Keyboard
@@ -18,17 +19,17 @@ import WebGL
 
 pxZoom : number
 pxZoom =
-    4
+    2
 
 
 unzoomedCanvasWidthPx : number
 unzoomedCanvasWidthPx =
-    Map.widthTiles * Tileset.tileWidthPx
+    Camera.widthTiles * Tileset.tileWidthPx
 
 
 unzoomedCanvasHeightPx : number
 unzoomedCanvasHeightPx =
-    Map.heightTiles * Tileset.tileHeightPx
+    Camera.heightTiles * Tileset.tileHeightPx
 
 
 zoomedCanvasWidthPx : number
@@ -61,20 +62,25 @@ subscriptions : Model -> Sub FrontendMsg
 subscriptions _ =
     Sub.batch
         [ Keyboard.subscriptions |> Sub.map GotKeys
-        , Browser.Events.onAnimationFrameDelta ((\dt -> dt / 1000) >> Tick)
+        , Browser.Events.onAnimationFrameDelta Tick
         ]
 
 
 init : Url.Url -> Nav.Key -> ( Model, Cmd FrontendMsg )
 init _ _ =
-    ( { tileset = Nothing
-      , keys = []
-      , time = 0
-      , player =
+    let
+        player : Player
+        player =
             { x = Map.initPlayerX
             , y = Map.initPlayerY
-            , lastMoveTime = 0
+            , lastMoveTimeMs = 0
             }
+    in
+    ( { tileset = Nothing
+      , keys = []
+      , timeMs = 0
+      , player = player
+      , camera = Camera.centeredAt player
       }
     , Tileset.load LoadedTileset
     )
@@ -96,23 +102,29 @@ update msg model =
                 keys =
                     Keyboard.update keyMsg model.keys
             in
-            ( { model | keys = keys }, Cmd.none )
+            ( { model | keys = keys }
+            , Cmd.none
+            )
 
         Tick dt ->
             let
-                newTime =
-                    model.time + dt
+                newTimeMs =
+                    model.timeMs + dt
+
+                newPlayer =
+                    tickPlayer newTimeMs model.keys model.player
             in
             ( { model
-                | time = newTime
-                , player = tickPlayer newTime model.keys model.player
+                | timeMs = newTimeMs
+                , player = newPlayer
+                , camera = Camera.centeredAt newPlayer
               }
             , Cmd.none
             )
 
 
 tickPlayer : Float -> List Keyboard.Key -> Player -> Player
-tickPlayer time keys player =
+tickPlayer timeMs keys player =
     let
         arrowKeys =
             keys
@@ -125,19 +137,19 @@ tickPlayer time keys player =
                     )
     in
     player
-        |> walk arrowKeys time
+        |> walk arrowKeys timeMs
 
 
-{-| The player will move in discrete jumps, 1 jump per this many seconds
+{-| The player will move in discrete jumps, 1 jump per this many ms
 -}
-walkSpeedSecPerTile : Float
-walkSpeedSecPerTile =
-    0.25
+walkSpeedMsPerTile : Float
+walkSpeedMsPerTile =
+    250
 
 
 walk : List Keyboard.Key -> Float -> Player -> Player
-walk arrowKeys time player =
-    if time - player.lastMoveTime < walkSpeedSecPerTile then
+walk arrowKeys timeMs player =
+    if timeMs - player.lastMoveTimeMs < walkSpeedMsPerTile then
         -- Ignore, too soon after previous movement.
         player
 
@@ -164,7 +176,7 @@ walk arrowKeys time player =
                             { player
                                 | x = newX
                                 , y = newY
-                                , lastMoveTime = time
+                                , lastMoveTimeMs = timeMs
                             }
                 in
                 case lastArrowKey of
@@ -205,8 +217,8 @@ viewDebug : Model -> Html msg
 viewDebug model =
     Html.ul []
         [ Html.li [] [ Html.text <| "keys: " ++ Debug.toString model.keys ]
-        , Html.li [] [ Html.text <| "time (truncated): " ++ String.fromInt (truncate model.time) ]
         , Html.li [] [ Html.text <| "player: " ++ Debug.toString model.player ]
+        , Html.li [] [ Html.text <| "camera: " ++ Debug.toString model.camera ]
         ]
 
 
@@ -218,7 +230,11 @@ viewGame model =
 
         Just tileset ->
             Map.tiles model.player
-                |> List.map (Renderer.tileToWebGLEntity tileset Map.projection)
+                |> List.map
+                    (Renderer.tileToWebGLEntity
+                        tileset
+                        (Camera.translateMatrix model.camera)
+                    )
                 |> WebGL.toHtml
                     [ Html.Attributes.width zoomedCanvasWidthPx
                     , Html.Attributes.height zoomedCanvasHeightPx

@@ -1,15 +1,11 @@
 module Map exposing
     ( hasSolid
-    , heightTiles
     , initPlayerX
     , initPlayerY
-    , projection
     , tiles
-    , widthTiles
     )
 
 import List.Cartesian
-import Math.Matrix4 as Mat4 exposing (Mat4)
 import Math.Vector2 exposing (Vec2)
 import Renderer
 import Set exposing (Set)
@@ -18,12 +14,12 @@ import Tileset exposing (TileType(..))
 
 widthTiles : number
 widthTiles =
-    8
+    13
 
 
 heightTiles : number
 heightTiles =
-    5
+    9
 
 
 lastColumn : number
@@ -44,17 +40,6 @@ initPlayerX =
 initPlayerY : number
 initPlayerY =
     2
-
-
-
--- Precomputed
-
-
-{-| Camera shows the whole map; world units = tiles. (0,0) = top-left.
--}
-projection : Mat4
-projection =
-    Mat4.makeOrtho2D 0 widthTiles heightTiles 0
 
 
 
