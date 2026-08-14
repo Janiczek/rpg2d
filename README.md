@@ -11,9 +11,6 @@
 ### Map
 - [ ] Tiled JSON level decoding
 
-### Sound
-- [ ] Sound (eg. when bumping into a solid)
-
 ### Multiplayer
 - [ ] See other players
 - [ ] Only get info about players near you

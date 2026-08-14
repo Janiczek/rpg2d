@@ -12,6 +12,7 @@ import Lamdera
 import Map
 import Player exposing (Player)
 import Renderer
+import Sound exposing (Sound)
 import Tileset
 import Types exposing (FrontendModel, FrontendMsg(..), ToFrontend(..))
 import Url
@@ -113,7 +114,7 @@ update msg model =
                 newTimeMs =
                     model.timeMs + dt
 
-                newPlayer =
+                ( newPlayer, soundToPlay ) =
                     tickPlayer newTimeMs model.keys model.player
             in
             ( { model
@@ -121,11 +122,16 @@ update msg model =
                 , player = newPlayer
                 , camera = Camera.centeredAt newPlayer |> Camera.clamp
               }
-            , Cmd.none
+            , case soundToPlay of
+                Nothing ->
+                    Cmd.none
+
+                Just sound ->
+                    Sound.play sound
             )
 
 
-tickPlayer : Float -> List Keyboard.Key -> Player -> Player
+tickPlayer : Float -> List Keyboard.Key -> Player -> ( Player, Maybe Sound )
 tickPlayer timeMs keys player =
     let
         arrowKeys =
@@ -154,16 +160,16 @@ isThrottlingRepeatedMovement timeMs playerLastMoveTimeMs =
     timeMs - playerLastMoveTimeMs < walkSpeedMsPerTile
 
 
-walk : List Keyboard.Key -> Float -> Player -> Player
+walk : List Keyboard.Key -> Float -> Player -> ( Player, Maybe Sound )
 walk arrowKeys timeMs player =
     if isThrottlingRepeatedMovement timeMs player.lastMoveTimeMs then
         -- Ignore, too soon after previous movement.
-        player
+        ( player, Nothing )
 
     else
         case arrowKeys of
             [] ->
-                player
+                ( player, Nothing )
 
             lastArrowKey :: _ ->
                 let
@@ -179,15 +185,16 @@ walk arrowKeys timeMs player =
                                 player.y + dy
                         in
                         if Map.hasSolid newX newY then
-                            -- TODO play bump sound?
-                            player
+                            ( player, Just Sound.Bounce )
 
                         else
-                            { x = newX
-                            , y = newY
-                            , direction = dir
-                            , lastMoveTimeMs = timeMs
-                            }
+                            ( { x = newX
+                              , y = newY
+                              , direction = dir
+                              , lastMoveTimeMs = timeMs
+                              }
+                            , Nothing
+                            )
                 in
                 case lastArrowKey of
                     Keyboard.ArrowLeft ->
@@ -203,7 +210,7 @@ walk arrowKeys timeMs player =
                         goWith Down
 
                     _ ->
-                        player
+                        ( player, Nothing )
 
 
 updateFromBackend : ToFrontend -> Model -> ( Model, Cmd FrontendMsg )

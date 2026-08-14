@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <tileset version="1.10" tiledversion="1.12.2" name="kenney-monochrome-rpg" tilewidth="16" tileheight="16" tilecount="136" columns="17">
- <image source="tileset.png" width="272" height="128"/>
+ <image source="../assets/textures/tileset_kenney_monochrome_rpg.png" width="272" height="128"/>
  <tile id="7">
   <properties>
    <property name="Solid" type="bool" value="true"/>

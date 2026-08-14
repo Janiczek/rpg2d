@@ -41,7 +41,7 @@ load toMsg =
 
 url : String
 url =
-    "assets/tileset.png"
+    "assets/textures/tileset_kenney_monochrome_rpg.png"
 
 
 widthPx : number
