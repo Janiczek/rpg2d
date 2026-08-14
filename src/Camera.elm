@@ -1,12 +1,35 @@
 module Camera exposing
-    ( Camera
-    , centeredAt
-    , heightTiles
-    , projection
-    , translateMatrix
-    , widthTiles
+    ( Camera, centeredAt
+    , clamp
+    , widthTiles, heightTiles
+    , projection, translateMatrix
     )
 
+{-|
+
+
+## Creation
+
+@docs Camera, centeredAt
+
+
+## Sanitization
+
+@docs clamp
+
+
+## Dimensions
+
+@docs widthTiles, heightTiles
+
+
+## WebGL
+
+@docs projection, translateMatrix
+
+-}
+
+import Map
 import Math.Matrix4 as Mat4 exposing (Mat4)
 
 
@@ -37,7 +60,7 @@ halfHeight =
 
 
 {-| Makes sense for odd camera width+height.
-Probably a bit uneven for even width+height? Haven't tried.
+A bit uneven (biased towards bottom right) for even width+height.
 -}
 centeredAt : { xy | x : Int, y : Int } -> Camera
 centeredAt { x, y } =
@@ -46,11 +69,21 @@ centeredAt { x, y } =
     }
 
 
+{-| Makes sure we don't show anything outside Map boundary. Instead the camera
+will stop moving (and the player will stop being centered).
+-}
+clamp : Camera -> Camera
+clamp { x, y } =
+    { x = Basics.clamp 0 (Map.widthTiles - widthTiles) x
+    , y = Basics.clamp 0 (Map.heightTiles - heightTiles) y
+    }
+
+
 
 -- WebGL shader stuff
 
 
-{-| Camera shows only a part of the world. (0,0) = top-left.
+{-| Camera shows only a part of the world.
 -}
 projection : Mat4
 projection =

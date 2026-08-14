@@ -9,9 +9,6 @@
 - [ ] Player sprite animates when moving or trying to move
 - [ ] Player sprite is different based on the last movement direction
 
-### Camera
-- [ ] Camera clamps to map edges after centering on player?
-
 ### Rendering
 - [ ] Only send out WebGL entities for the visible region
 

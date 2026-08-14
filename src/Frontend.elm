@@ -80,7 +80,7 @@ init _ _ =
       , keys = []
       , timeMs = 0
       , player = player
-      , camera = Camera.centeredAt player
+      , camera = Camera.centeredAt player |> Camera.clamp
       }
     , Tileset.load LoadedTileset
     )
@@ -117,7 +117,7 @@ update msg model =
             ( { model
                 | timeMs = newTimeMs
                 , player = newPlayer
-                , camera = Camera.centeredAt newPlayer
+                , camera = Camera.centeredAt newPlayer |> Camera.clamp
               }
             , Cmd.none
             )
@@ -233,6 +233,7 @@ viewGame model =
                 |> List.map
                     (Renderer.tileToWebGLEntity
                         tileset
+                        Camera.projection
                         (Camera.translateMatrix model.camera)
                     )
                 |> WebGL.toHtml

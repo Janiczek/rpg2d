@@ -1,8 +1,10 @@
 module Map exposing
     ( hasSolid
+    , heightTiles
     , initPlayerX
     , initPlayerY
     , tiles
+    , widthTiles
     )
 
 import List.Cartesian

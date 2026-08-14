@@ -1,6 +1,5 @@
 module Renderer exposing (Tile, tile, tileToWebGLEntity)
 
-import Camera
 import Math.Matrix4 as Mat4 exposing (Mat4)
 import Math.Vector2 as Vec2 exposing (Vec2)
 import Tileset
@@ -27,14 +26,14 @@ blend =
     [ Blend.add Blend.srcAlpha Blend.oneMinusSrcAlpha ]
 
 
-tileToWebGLEntity : Tileset.LoadedTileset -> Mat4 -> Tile -> Entity
-tileToWebGLEntity tileset cameraTranslateMatrix t =
+tileToWebGLEntity : Tileset.LoadedTileset -> Mat4 -> Mat4 -> Tile -> Entity
+tileToWebGLEntity tileset cameraProjection cameraTranslateMatrix t =
     WebGL.entityWith
         blend
         vertexShader
         fragmentShader
         quadMesh
-        { projection = Camera.projection
+        { projection = cameraProjection
         , view = cameraTranslateMatrix
         , model = Mat4.makeTranslate3 (toFloat t.sceneX) (toFloat t.sceneY) 0
         , texture = tileset
