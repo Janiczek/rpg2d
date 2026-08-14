@@ -9,13 +9,11 @@
 - [ ] Player sprite animates when moving or trying to move
 - [ ] Player sprite is different based on the last movement direction
 
-### Spritesheet
-- [ ] Make bg around trees transparent
-
 ### Camera
-- [ ] Fixed size camera smaller than the world
-- [ ] Camera follows the player (centered at all times)...
-- [ ] ...unless the map edge is near?
+- [ ] Camera clamps to map edges after centering on player?
+
+### Rendering
+- [ ] Only send out WebGL entities for the visible region
 
 ### Map
 - [ ] Tiled JSON level decoding
