@@ -1,7 +1,31 @@
-module Renderer exposing (Tile, tile, tileToWebGLEntity)
+module Renderer exposing
+    ( Tile, tile
+    , tileToWebGLEntity
+    , noRotation, rotateClockwise, rotate180, rotateAnticlockwise
+    )
+
+{-|
+
+
+## Renderables
+
+@docs Tile, tile
+
+
+## View via WebGL
+
+@docs tileToWebGLEntity
+
+
+## Rotations
+
+@docs noRotation, rotateClockwise, rotate180, rotateAnticlockwise
+
+-}
 
 import Math.Matrix4 as Mat4 exposing (Mat4)
 import Math.Vector2 as Vec2 exposing (Vec2)
+import Math.Vector3 as Vec3 exposing (Vec3)
 import Tileset
 import WebGL exposing (Entity, Mesh, Shader)
 import WebGL.Settings exposing (Setting)
@@ -11,6 +35,7 @@ import WebGL.Texture exposing (Texture)
 
 type alias Tile =
     { tileCoord : Vec2
+    , rotation : Mat4 -> Mat4
     , sceneX : Int
     , sceneY : Int
     }
@@ -35,19 +60,54 @@ tileToWebGLEntity tileset cameraProjection cameraTranslateMatrix t =
         quadMesh
         { projection = cameraProjection
         , view = cameraTranslateMatrix
-        , model = Mat4.makeTranslate3 (toFloat t.sceneX) (toFloat t.sceneY) 0
+        , model =
+            Mat4.makeTranslate3 (toFloat t.sceneX) (toFloat t.sceneY) 0
+                |> t.rotation
         , texture = tileset
         , tileCoord = t.tileCoord
         , tileSizeUV = Tileset.tileSizeUV
         }
 
 
-tile : Int -> Int -> Vec2 -> Tile
-tile sceneX sceneY tileCoord =
+tile : Int -> Int -> Vec2 -> (Mat4 -> Mat4) -> Tile
+tile sceneX sceneY tileCoord rotation =
     { tileCoord = tileCoord
+    , rotation = rotation
     , sceneX = sceneX
     , sceneY = sceneY
     }
+
+
+
+-- Rotation
+
+
+noRotation : Mat4 -> Mat4
+noRotation mat =
+    mat
+
+
+aboutCenter : (Mat4 -> Mat4) -> Mat4 -> Mat4
+aboutCenter rotationAboutOrigin original =
+    original
+        |> Mat4.translate3 0.5 0.5 0
+        |> rotationAboutOrigin
+        |> Mat4.translate3 -0.5 -0.5 0
+
+
+rotateClockwise : Mat4 -> Mat4
+rotateClockwise =
+    aboutCenter (Mat4.rotate (pi / 2) Vec3.k)
+
+
+rotateAnticlockwise : Mat4 -> Mat4
+rotateAnticlockwise =
+    aboutCenter (Mat4.rotate (-pi / 2) Vec3.k)
+
+
+rotate180 : Mat4 -> Mat4
+rotate180 =
+    aboutCenter (Mat4.rotate pi Vec3.k)
 
 
 
@@ -136,10 +196,7 @@ vertexShader =
         varying vec2 vTexCoord;
 
         void main () {
-            vTexCoord = vec2(
-                (tileCoord.x + position.x) * tileSizeUV.x,
-                (tileCoord.y + position.y) * tileSizeUV.y
-            );
+            vTexCoord = (tileCoord + position) * tileSizeUV;
             gl_Position = projection * view * model * vec4(position, 0.0, 1.0);
         }
     |]

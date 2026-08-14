@@ -7,7 +7,6 @@
 
 ### Player animation
 - [ ] Player sprite animates when moving or trying to move
-- [ ] Player sprite is different based on the last movement direction
 
 ### Map
 - [ ] Tiled JSON level decoding

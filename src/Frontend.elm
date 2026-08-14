@@ -4,6 +4,7 @@ import Browser
 import Browser.Events
 import Browser.Navigation as Nav
 import Camera
+import Direction exposing (Direction(..))
 import Html exposing (Html)
 import Html.Attributes
 import Keyboard
@@ -73,6 +74,7 @@ init _ _ =
         player =
             { x = Map.initPlayerX
             , y = Map.initPlayerY
+            , direction = Down
             , lastMoveTimeMs = 0
             }
     in
@@ -165,8 +167,11 @@ walk arrowKeys timeMs player =
 
             lastArrowKey :: _ ->
                 let
-                    goWith dx dy =
+                    goWith dir =
                         let
+                            ( dx, dy ) =
+                                Direction.delta dir
+
                             newX =
                                 player.x + dx
 
@@ -178,24 +183,24 @@ walk arrowKeys timeMs player =
                             player
 
                         else
-                            { player
-                                | x = newX
-                                , y = newY
-                                , lastMoveTimeMs = timeMs
+                            { x = newX
+                            , y = newY
+                            , direction = dir
+                            , lastMoveTimeMs = timeMs
                             }
                 in
                 case lastArrowKey of
                     Keyboard.ArrowLeft ->
-                        goWith -1 0
+                        goWith Left
 
                     Keyboard.ArrowRight ->
-                        goWith 1 0
+                        goWith Right
 
                     Keyboard.ArrowUp ->
-                        goWith 0 -1
+                        goWith Up
 
                     Keyboard.ArrowDown ->
-                        goWith 0 1
+                        goWith Down
 
                     _ ->
                         player

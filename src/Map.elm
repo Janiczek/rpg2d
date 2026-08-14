@@ -1,14 +1,21 @@
 module Map exposing
-    ( hasSolid
-    , heightTiles
-    , initPlayerX
-    , initPlayerY
-    , tiles
-    , widthTiles
+    ( widthTiles, heightTiles
+    , initPlayerX, initPlayerY
+    , tiles, hasSolid
     )
 
+{-|
+
+@docs widthTiles, heightTiles
+@docs initPlayerX, initPlayerY
+@docs tiles, hasSolid
+
+-}
+
+import Direction
 import List.Cartesian
 import Math.Vector2 exposing (Vec2)
+import Player exposing (Player)
 import Renderer
 import Set exposing (Set)
 import Tileset exposing (TileType(..))
@@ -76,7 +83,7 @@ wallTile =
 layer0Grass : List Renderer.Tile
 layer0Grass =
     List.Cartesian.map2
-        (\x y -> Renderer.tile x y grassTile)
+        (\x y -> Renderer.tile x y grassTile Renderer.noRotation)
         allXs
         allYs
 
@@ -94,15 +101,15 @@ layer1Walls : List Renderer.Tile
 layer1Walls =
     wallCoords
         |> Set.toList
-        |> List.map (\( x, y ) -> Renderer.tile x y wallTile)
+        |> List.map (\( x, y ) -> Renderer.tile x y wallTile Renderer.noRotation)
 
 
-tiles : { player | x : Int, y : Int } -> { camera | x : Float, y : Float } -> Int -> Int -> List Renderer.Tile
+tiles : Player -> { camera | x : Float, y : Float } -> Int -> Int -> List Renderer.Tile
 tiles p camera cameraWidth cameraHeight =
     let
         player : Renderer.Tile
         player =
-            Renderer.tile p.x p.y playerTile
+            Renderer.tile p.x p.y playerTile (Direction.rotation p.direction)
 
         cameraLeft : Int
         cameraLeft =
