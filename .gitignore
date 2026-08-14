@@ -1,3 +1,4 @@
 elm-stuff/
+*.tiled-session
 node_modules/
 .DS_Store
