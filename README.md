@@ -9,9 +9,6 @@
 - [ ] Player sprite animates when moving or trying to move
 - [ ] Player sprite is different based on the last movement direction
 
-### Rendering
-- [ ] Only send out WebGL entities for the visible region
-
 ### Map
 - [ ] Tiled JSON level decoding
 

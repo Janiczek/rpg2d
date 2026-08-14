@@ -59,7 +59,7 @@ app =
 
 
 subscriptions : Model -> Sub FrontendMsg
-subscriptions _ =
+subscriptions model =
     Sub.batch
         [ Keyboard.subscriptions |> Sub.map GotKeys
         , Browser.Events.onAnimationFrameDelta Tick
@@ -147,9 +147,14 @@ walkSpeedMsPerTile =
     250
 
 
+isThrottlingRepeatedMovement : Float -> Float -> Bool
+isThrottlingRepeatedMovement timeMs playerLastMoveTimeMs =
+    timeMs - playerLastMoveTimeMs < walkSpeedMsPerTile
+
+
 walk : List Keyboard.Key -> Float -> Player -> Player
 walk arrowKeys timeMs player =
-    if timeMs - player.lastMoveTimeMs < walkSpeedMsPerTile then
+    if isThrottlingRepeatedMovement timeMs player.lastMoveTimeMs then
         -- Ignore, too soon after previous movement.
         player
 
@@ -215,10 +220,21 @@ view model =
 
 viewDebug : Model -> Html msg
 viewDebug model =
+    let
+        tilesSent : Int
+        tilesSent =
+            Map.tiles
+                model.player
+                model.camera
+                Camera.widthTiles
+                Camera.heightTiles
+                |> List.length
+    in
     Html.ul []
         [ Html.li [] [ Html.text <| "keys: " ++ Debug.toString model.keys ]
         , Html.li [] [ Html.text <| "player: " ++ Debug.toString model.player ]
         , Html.li [] [ Html.text <| "camera: " ++ Debug.toString model.camera ]
+        , Html.li [] [ Html.text <| "tiles sent to GPU: " ++ String.fromInt tilesSent ]
         ]
 
 
@@ -229,7 +245,11 @@ viewGame model =
             Html.text "Loading tileset..."
 
         Just tileset ->
-            Map.tiles model.player
+            Map.tiles
+                model.player
+                model.camera
+                Camera.widthTiles
+                Camera.heightTiles
                 |> List.map
                     (Renderer.tileToWebGLEntity
                         tileset

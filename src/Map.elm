@@ -97,15 +97,41 @@ layer1Walls =
         |> List.map (\( x, y ) -> Renderer.tile x y wallTile)
 
 
-tiles : { player | x : Int, y : Int } -> List Renderer.Tile
-tiles p =
+tiles : { player | x : Int, y : Int } -> { camera | x : Float, y : Float } -> Int -> Int -> List Renderer.Tile
+tiles p camera cameraWidth cameraHeight =
     let
         player : Renderer.Tile
         player =
             Renderer.tile p.x p.y playerTile
+
+        cameraLeft : Int
+        cameraLeft =
+            truncate camera.x
+
+        cameraRight : Int
+        cameraRight =
+            cameraLeft + cameraWidth - 1
+
+        cameraTop : Int
+        cameraTop =
+            truncate camera.y
+
+        cameraBottom : Int
+        cameraBottom =
+            cameraTop + cameraHeight - 1
     in
-    layer0Grass
-        ++ (player :: layer1Walls)
+    -- Later with dynamic maps we'd want the actual List.range generation to be
+    -- constrained, not List.filter after the fact.
+    (layer0Grass ++ (player :: layer1Walls))
+        |> List.filter (isVisible cameraLeft cameraRight cameraTop cameraBottom)
+
+
+isVisible : Int -> Int -> Int -> Int -> Renderer.Tile -> Bool
+isVisible cameraLeft cameraRight cameraTop cameraBottom tile =
+    (tile.sceneX >= cameraLeft)
+        && (tile.sceneX <= cameraRight)
+        && (tile.sceneY >= cameraTop)
+        && (tile.sceneY <= cameraBottom)
 
 
 hasSolid : Int -> Int -> Bool
