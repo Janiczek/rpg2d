@@ -75,7 +75,6 @@ init _ _ =
             { x = Map.initPlayerX
             , y = Map.initPlayerY
             , direction = Down
-            , lastMoveTimeMs = 0
             , movement = Nothing
             , mesh = Renderer.emptyMesh
             }
@@ -119,19 +118,7 @@ update msg model =
                                     || (key == Keyboard.ArrowDown)
                             )
             in
-            ( { model
-                | arrowKeys = arrowKeys
-                , player =
-                    if
-                        List.isEmpty arrowKeys
-                            && not (List.isEmpty model.arrowKeys)
-                    then
-                        -- stopped holding keys, let's disable the repeated movement throttle
-                        model.player |> Player.disableRepeatedMovementThrottle
-
-                    else
-                        model.player
-              }
+            ( { model | arrowKeys = arrowKeys }
             , Cmd.none
             )
 
@@ -162,103 +149,118 @@ update msg model =
 tickPlayer : Float -> List Keyboard.Key -> Player -> ( Player, Maybe Sound )
 tickPlayer timeMs arrowKeys player =
     player
-        |> endMovement timeMs
-        |> recomputePlayerMesh timeMs
-        |> startMovement arrowKeys timeMs
+        |> handleMovement timeMs arrowKeys
 
 
-endMovement : Float -> Player -> Player
-endMovement timeMs player =
-    case player.movement of
-        Nothing ->
-            player
-
-        Just movement ->
-            if (timeMs - movement.moveStartMs) >= Player.movementSpeedMsPerTile then
-                { player | movement = Nothing }
-                    |> Player.recomputeMesh timeMs
-
-            else
-                player
-
-
-recomputePlayerMesh : Float -> Player -> Player
-recomputePlayerMesh timeMs player =
-    case player.movement of
-        Nothing ->
-            player
-
-        Just _ ->
-            player
-                |> Player.recomputeMesh timeMs
-
-
-startMovement : List Keyboard.Key -> Float -> Player -> ( Player, Maybe Sound )
-startMovement arrowKeys timeMs player =
-    case arrowKeys of
-        [] ->
+handleMovement : Float -> List Keyboard.Key -> Player -> ( Player, Maybe Sound )
+handleMovement timeMs arrowKeys player =
+    case ( player.movement, arrowKeys ) of
+        ( Nothing, [] ) ->
+            -- not moving, not pressing any keys
             ( player, Nothing )
 
-        lastArrowKey :: _ ->
-            if Player.canDoRepeatedMovement timeMs player then
-                let
-                    goWith dir =
-                        let
-                            ( dx, dy ) =
-                                Direction.delta dir
+        ( Nothing, lastArrowKey :: _ ) ->
+            -- can start moving, we've throttled
+            moveOrCollide timeMs lastArrowKey Nothing player
 
-                            targetX =
-                                player.x + dx
-
-                            targetY =
-                                player.y + dy
-                        in
-                        if Map.hasSolid targetX targetY then
-                            -- Can't move there: collision!
-                            ( { player
-                                | lastMoveTimeMs = timeMs
-                                , direction = dir
-                              }
-                                |> Player.recomputeMesh timeMs
-                            , Just Sound.Bounce
-                            )
-
-                        else
-                            ( { player
-                                | x = targetX
-                                , y = targetY
-                                , direction = dir
-                                , lastMoveTimeMs = timeMs
-                                , movement =
-                                    Just
-                                        { origX = toFloat player.x
-                                        , origY = toFloat player.y
-                                        , moveStartMs = timeMs
-                                        }
-                              }
-                                |> Player.recomputeMesh timeMs
-                            , Nothing
-                            )
-                in
-                case lastArrowKey of
-                    Keyboard.ArrowLeft ->
-                        goWith Left
-
-                    Keyboard.ArrowRight ->
-                        goWith Right
-
-                    Keyboard.ArrowUp ->
-                        goWith Up
-
-                    Keyboard.ArrowDown ->
-                        goWith Down
-
-                    _ ->
-                        ( player, Nothing )
+        ( Just movement, [] ) ->
+            if timeMs - movement.currentTileMoveStartMs >= Player.movementSpeedMsPerTile then
+                -- should end the movement
+                ( { player | movement = Nothing }
+                    |> Player.recomputeMesh timeMs
+                , Nothing
+                )
 
             else
-                -- Ignore, too soon after previous movement.
-                ( player, Nothing )
+                -- still moving, shouldn't end the movement yet
+                -- recompute the mesh
+                ( player
+                    |> Player.recomputeMesh timeMs
+                , Nothing
+                )
+
+        ( Just movement, lastArrowKey :: _ ) ->
+            if timeMs - movement.currentTileMoveStartMs >= Player.movementSpeedMsPerTile then
+                -- current movement ended, we can chain a new one
+                -- change the direction etc.
+                { player | movement = Nothing }
+                    |> moveOrCollide timeMs lastArrowKey (Just movement.movementChainStartMs)
+
+            else
+                -- we're holding a key in the middle of movement - ignore
+                ( player
+                    |> Player.recomputeMesh timeMs
+                , Nothing
+                )
+
+
+moveOrCollide : Float -> Keyboard.Key -> Maybe Float -> Player -> ( Player, Maybe Sound )
+moveOrCollide timeMs lastArrowKey movementChainStartMs player =
+    let
+        goWith dir =
+            let
+                ( dx, dy ) =
+                    Direction.delta dir
+
+                targetX =
+                    player.x + dx
+
+                targetY =
+                    player.y + dy
+            in
+            if Map.hasSolid targetX targetY then
+                -- Can't move there: collision!
+                -- We'll start off a movement to the same tile to play the animation and throttle, though.
+                ( { player
+                    | direction = dir
+                    , movement =
+                        Just
+                            { origX = toFloat player.x
+                            , origY = toFloat player.y
+                            , currentTileMoveStartMs = timeMs
+                            , movementChainStartMs =
+                                movementChainStartMs
+                                    |> Maybe.withDefault timeMs
+                            }
+                  }
+                    |> Player.recomputeMesh timeMs
+                , Just Sound.Bounce
+                )
+
+            else
+                ( { player
+                    | x = targetX
+                    , y = targetY
+                    , direction = dir
+                    , movement =
+                        Just
+                            { origX = toFloat player.x
+                            , origY = toFloat player.y
+                            , currentTileMoveStartMs = timeMs
+                            , movementChainStartMs =
+                                movementChainStartMs
+                                    |> Maybe.withDefault timeMs
+                            }
+                  }
+                    |> Player.recomputeMesh timeMs
+                , Nothing
+                )
+    in
+    case lastArrowKey of
+        Keyboard.ArrowLeft ->
+            goWith Left
+
+        Keyboard.ArrowRight ->
+            goWith Right
+
+        Keyboard.ArrowUp ->
+            goWith Up
+
+        Keyboard.ArrowDown ->
+            goWith Down
+
+        _ ->
+            ( player, Nothing )
 
 
 updateFromBackend : ToFrontend -> Model -> ( Model, Cmd FrontendMsg )
@@ -272,12 +274,29 @@ view : Model -> Browser.Document FrontendMsg
 view model =
     { title = "2D RPG"
     , body =
-        [ {- viewDebug model
-             ,
-          -}
-          viewGame model
+        [ viewDebug model
+        , viewGame model
         ]
     }
+
+
+viewDebug : Model -> Html msg
+viewDebug model =
+    Html.ul []
+        [ Html.li [] [ Html.text <| "arrow keys: " ++ Debug.toString model.arrowKeys ]
+        , Html.li []
+            [ Html.text <|
+                "player: "
+                    ++ Debug.toString
+                        ( ( model.player.x
+                          , model.player.y
+                          , model.player.direction
+                          )
+                        , model.player.movement
+                        )
+            ]
+        , Html.li [] [ Html.text <| "camera: " ++ Debug.toString model.camera ]
+        ]
 
 
 viewGame : Model -> Html msg

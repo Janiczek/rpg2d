@@ -70,7 +70,8 @@ type TileType
     | T_Grass3
     | T_Grass4
     | T_Wall
-    | T_Player
+    | T_Player1
+    | T_Player3
 
 
 {-| x,y (col,row)
@@ -95,5 +96,8 @@ coord tile =
         T_Wall ->
             ( 13, 0 )
 
-        T_Player ->
+        T_Player1 ->
             ( 0, 7 )
+
+        T_Player3 ->
+            ( 2, 7 )

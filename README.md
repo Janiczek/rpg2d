@@ -2,9 +2,6 @@
 
 ## Todo:
 
-### Player animation
-- [ ] Player sprite animates when moving or trying to move
-
 ### Map
 - [ ] Tiled JSON level decoding
 
