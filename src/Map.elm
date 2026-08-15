@@ -65,9 +65,24 @@ allYs =
     List.range 0 lastRow
 
 
-grassTile : Vec2
-grassTile =
-    Tileset.tileCoord T_Grass
+grass1Tile : Vec2
+grass1Tile =
+    Tileset.tileCoord T_Grass1
+
+
+grass2Tile : Vec2
+grass2Tile =
+    Tileset.tileCoord T_Grass2
+
+
+grass3Tile : Vec2
+grass3Tile =
+    Tileset.tileCoord T_Grass3
+
+
+grass4Tile : Vec2
+grass4Tile =
+    Tileset.tileCoord T_Grass4
 
 
 playerTile : Vec2
@@ -80,10 +95,38 @@ wallTile =
     Tileset.tileCoord T_Wall
 
 
+coordsToIndex : number -> number -> number
+coordsToIndex x y =
+    y * widthTiles + x
+
+
 layer0Grass : List Renderer.Tile
 layer0Grass =
     List.Cartesian.map2
-        (\x y -> Renderer.tile x y grassTile Renderer.noRotation)
+        (\x y ->
+            let
+                i =
+                    coordsToIndex x y |> modBy 4
+
+                tile =
+                    case i of
+                        0 ->
+                            grass1Tile
+
+                        1 ->
+                            grass2Tile
+
+                        2 ->
+                            grass3Tile
+
+                        3 ->
+                            grass4Tile
+
+                        _ ->
+                            grass1Tile
+            in
+            Renderer.tile x y tile Renderer.noRotation
+        )
         allXs
         allYs
 

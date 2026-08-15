@@ -76,7 +76,10 @@ tileSizeUV =
 
 
 type TileType
-    = T_Grass
+    = T_Grass1
+    | T_Grass2
+    | T_Grass3
+    | T_Grass4
     | T_Wall
     | T_Player
 
@@ -88,8 +91,17 @@ Bottom-right = 16,7
 tileCoord : TileType -> Vec2
 tileCoord tile =
     case tile of
-        T_Grass ->
+        T_Grass1 ->
             Vec2.vec2 0 0
+
+        T_Grass2 ->
+            Vec2.vec2 0 1
+
+        T_Grass3 ->
+            Vec2.vec2 0 2
+
+        T_Grass4 ->
+            Vec2.vec2 0 3
 
         T_Wall ->
             Vec2.vec2 13 0
