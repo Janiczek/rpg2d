@@ -2,14 +2,14 @@ module Tileset exposing
     ( LoadedTileset
     , TileType(..)
     , Tileset
+    , coord
+    , heightPx
     , load
-    , tileCoord
     , tileHeightPx
-    , tileSizeUV
     , tileWidthPx
+    , widthPx
     )
 
-import Math.Vector2 as Vec2 exposing (Vec2)
 import Task
 import WebGL.Texture as Texture exposing (Texture)
 
@@ -64,17 +64,6 @@ tileHeightPx =
     16
 
 
-{-| One tile's size as fraction of the whole tileset texture. We're trying to
-pinpoint where on the whole texture (coords 0..1) is the tile we're interested
-in.
--}
-tileSizeUV : Vec2
-tileSizeUV =
-    Vec2.vec2
-        (tileWidthPx / widthPx)
-        (tileHeightPx / heightPx)
-
-
 type TileType
     = T_Grass1
     | T_Grass2
@@ -88,23 +77,23 @@ type TileType
 Top-left = 0,0
 Bottom-right = 16,7
 -}
-tileCoord : TileType -> Vec2
-tileCoord tile =
+coord : TileType -> ( number, number )
+coord tile =
     case tile of
         T_Grass1 ->
-            Vec2.vec2 0 0
+            ( 0, 0 )
 
         T_Grass2 ->
-            Vec2.vec2 0 1
+            ( 0, 1 )
 
         T_Grass3 ->
-            Vec2.vec2 0 2
+            ( 0, 2 )
 
         T_Grass4 ->
-            Vec2.vec2 0 3
+            ( 0, 3 )
 
         T_Wall ->
-            Vec2.vec2 13 0
+            ( 13, 0 )
 
         T_Player ->
-            Vec2.vec2 0 7
+            ( 0, 7 )

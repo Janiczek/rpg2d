@@ -1,25 +1,26 @@
 module Map exposing
     ( widthTiles, heightTiles
     , initPlayerX, initPlayerY
-    , tiles, hasSolid
+    , webGLEntities, hasSolid
     )
 
 {-|
 
 @docs widthTiles, heightTiles
 @docs initPlayerX, initPlayerY
-@docs tiles, hasSolid
+@docs webGLEntities, hasSolid
 
 -}
 
 import Constants
 import Direction
 import List.Cartesian
-import Math.Vector2 exposing (Vec2)
+import Math.Matrix4 as Mat4 exposing (Mat4)
 import Player exposing (Player)
 import Renderer
 import Set exposing (Set)
 import Tileset exposing (TileType(..))
+import WebGL
 
 
 widthTiles : number
@@ -66,34 +67,34 @@ allYs =
     List.range 0 lastRow
 
 
-grass1Tile : Vec2
+grass1Tile : ( number, number )
 grass1Tile =
-    Tileset.tileCoord T_Grass1
+    Tileset.coord T_Grass1
 
 
-grass2Tile : Vec2
+grass2Tile : ( number, number )
 grass2Tile =
-    Tileset.tileCoord T_Grass2
+    Tileset.coord T_Grass2
 
 
-grass3Tile : Vec2
+grass3Tile : ( number, number )
 grass3Tile =
-    Tileset.tileCoord T_Grass3
+    Tileset.coord T_Grass3
 
 
-grass4Tile : Vec2
+grass4Tile : ( number, number )
 grass4Tile =
-    Tileset.tileCoord T_Grass4
+    Tileset.coord T_Grass4
 
 
-playerTile : Vec2
+playerTile : ( number, number )
 playerTile =
-    Tileset.tileCoord T_Player
+    Tileset.coord T_Player
 
 
-wallTile : Vec2
+wallTile : ( number, number )
 wallTile =
-    Tileset.tileCoord T_Wall
+    Tileset.coord T_Wall
 
 
 coordsToIndex : number -> number -> number
@@ -148,16 +149,12 @@ layer1Walls =
         |> List.map (\( x, y ) -> Renderer.tile (toFloat x) (toFloat y) wallTile Renderer.noRotation)
 
 
-tiles : Player -> Float -> { camera | x : Float, y : Float } -> Float -> Float -> List Renderer.Tile
-tiles p timeMs camera cameraWidth cameraHeight =
+{-| Everything except for the player.
+-}
+mapMesh : { camera | x : Float, y : Float } -> Float -> Float -> Renderer.Mesh
+mapMesh camera cameraWidth cameraHeight =
+    -- TODO try and measure without the filtering
     let
-        ( px, py ) =
-            Player.position Constants.playerEasing timeMs p
-
-        player : Renderer.Tile
-        player =
-            Renderer.tile px py playerTile (Direction.rotation p.direction)
-
         cameraLeft : Float
         cameraLeft =
             camera.x
@@ -174,10 +171,30 @@ tiles p timeMs camera cameraWidth cameraHeight =
         cameraBottom =
             cameraTop + cameraHeight - 1
     in
-    -- Later with dynamic maps we'd want the actual List.range generation to be
-    -- constrained, not List.filter after the fact.
-    (layer0Grass ++ (player :: layer1Walls))
+    (layer0Grass ++ layer1Walls)
+        -- Later with dynamic maps we'd want the actual List.range generation to be
+        -- constrained, not List.filter after the fact.
         |> List.filter (isVisible cameraLeft cameraRight cameraTop cameraBottom)
+        |> Renderer.tilesToMesh
+
+
+playerMesh : Float -> Player -> Renderer.Mesh
+playerMesh timeMs p =
+    let
+        ( px, py ) =
+            Player.position Constants.playerEasing timeMs p
+    in
+    Renderer.tilesToMesh
+        [ Renderer.tile px py playerTile (Direction.rotation p.direction) ]
+
+
+webGLEntities : Float -> Player -> { camera | x : Float, y : Float } -> Float -> Float -> Tileset.LoadedTileset -> Mat4 -> Mat4 -> List WebGL.Entity
+webGLEntities timeMs player camera cameraWidth cameraHeight tileset cameraProjection cameraTranslateMatrix =
+    [ mapMesh camera cameraWidth cameraHeight
+        |> Renderer.meshToWebGLEntity tileset cameraProjection cameraTranslateMatrix Mat4.identity
+    , playerMesh timeMs player
+        |> Renderer.meshToWebGLEntity tileset cameraProjection cameraTranslateMatrix Mat4.identity
+    ]
 
 
 {-| We'll add 1 tile safety margin for cases where the player is moving and

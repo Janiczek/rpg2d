@@ -1,6 +1,6 @@
 module Renderer exposing
     ( Tile, tile
-    , tileToWebGLEntity
+    , Mesh, Vertex, tilesToMesh, meshToWebGLEntity
     , noRotation, rotateClockwise, rotate180, rotateAnticlockwise
     )
 
@@ -10,11 +10,7 @@ module Renderer exposing
 ## Renderables
 
 @docs Tile, tile
-
-
-## View via WebGL
-
-@docs tileToWebGLEntity
+@docs Mesh, Vertex, tilesToMesh, meshToWebGLEntity
 
 
 ## Rotations
@@ -27,17 +23,18 @@ import Math.Matrix4 as Mat4 exposing (Mat4)
 import Math.Vector2 as Vec2 exposing (Vec2)
 import Math.Vector3 as Vec3
 import Tileset
-import WebGL exposing (Entity, Mesh, Shader)
+import WebGL exposing (Entity, Shader)
 import WebGL.Settings exposing (Setting)
 import WebGL.Settings.Blend as Blend
 import WebGL.Texture exposing (Texture)
 
 
 type alias Tile =
-    { tileCoord : Vec2
-    , rotation : Mat4 -> Mat4
+    { rotation : Mat4 -> Mat4
     , sceneX : Float
     , sceneY : Float
+    , tilesetX : Float
+    , tilesetY : Float
     }
 
 
@@ -51,30 +48,27 @@ blend =
     [ Blend.add Blend.srcAlpha Blend.oneMinusSrcAlpha ]
 
 
-tileToWebGLEntity : Tileset.LoadedTileset -> Mat4 -> Mat4 -> Tile -> Entity
-tileToWebGLEntity tileset cameraProjection cameraTranslateMatrix t =
+meshToWebGLEntity : Tileset.LoadedTileset -> Mat4 -> Mat4 -> Mat4 -> Mesh -> Entity
+meshToWebGLEntity tileset cameraProjection cameraTranslateMatrix model mesh =
     WebGL.entityWith
         blend
         vertexShader
         fragmentShader
-        quadMesh
+        mesh
         { projection = cameraProjection
         , view = cameraTranslateMatrix
-        , model =
-            Mat4.makeTranslate3 t.sceneX t.sceneY 0
-                |> t.rotation
+        , model = model
         , texture = tileset
-        , tileCoord = t.tileCoord
-        , tileSizeUV = Tileset.tileSizeUV
         }
 
 
-tile : Float -> Float -> Vec2 -> (Mat4 -> Mat4) -> Tile
-tile sceneX sceneY tileCoord rotation =
-    { tileCoord = tileCoord
-    , rotation = rotation
+tile : Float -> Float -> ( Float, Float ) -> (Mat4 -> Mat4) -> Tile
+tile sceneX sceneY ( tilesetX, tilesetY ) rotation =
+    { rotation = rotation
     , sceneX = sceneX
     , sceneY = sceneY
+    , tilesetX = tilesetX
+    , tilesetY = tilesetY
     }
 
 
@@ -115,45 +109,79 @@ rotate180 =
 
 
 type alias Vertex =
-    { position : Vec2 }
+    { worldPosition : Vec2 -- tile space (0..1 is one tile, 0..5 is 5 tiles, etc.)
+    , texCoord : Vec2 -- which tile do we want to render?
+    }
 
 
-{-| Square! Two triangles togetner.
+type alias Mesh =
+    WebGL.Mesh Vertex
 
-    0,1    1,1
-    -------
-    |    /|
-    |   / |
-    |  /  |
-    | /   |
-    |/    |
-    -------
-    0,0    1,0
 
-Note: I might be wrong about where each axis' 0 and 1 are.
-
-For us, each tile is a square shape.
-
--}
-quadMesh : Mesh Vertex
-quadMesh =
+tileVertices : Tile -> List Vertex
+tileVertices tile_ =
     let
-        p00 =
-            Vertex (Vec2.vec2 0 0)
+        uvW =
+            Tileset.tileWidthPx / Tileset.widthPx
 
-        p10 =
-            Vertex (Vec2.vec2 1 0)
+        uvH =
+            Tileset.tileHeightPx / Tileset.heightPx
 
-        p11 =
-            Vertex (Vec2.vec2 1 1)
+        localTransform : Mat4
+        localTransform =
+            tile_.rotation Mat4.identity
 
-        p01 =
-            Vertex (Vec2.vec2 0 1)
+        corner x y =
+            let
+                rotated =
+                    Mat4.transform localTransform (Vec3.vec3 x y 0)
+
+                worldX =
+                    tile_.sceneX + Vec3.getX rotated
+
+                worldY =
+                    tile_.sceneY + Vec3.getY rotated
+            in
+            { worldPosition =
+                Vec2.vec2
+                    worldX
+                    worldY
+            , texCoord =
+                Vec2.vec2
+                    ((tile_.tilesetX + x) * uvW)
+                    ((tile_.tilesetY + y) * uvH)
+            }
     in
-    WebGL.triangles
-        [ ( p00, p10, p11 )
-        , ( p00, p11, p01 )
-        ]
+    [ corner 0 0
+    , corner 1 0
+    , corner 1 1
+    , corner 0 1
+    ]
+
+
+tilesToMesh : List Tile -> Mesh
+tilesToMesh tiles =
+    let
+        step tile_ ( vs, is, base ) =
+            -- TODO PERF: concat once? is order important?
+            ( vs ++ tileVertices tile_
+            , is
+                ++ [ ( base
+                     , base + 1
+                     , base + 2
+                     )
+                   , ( base
+                     , base + 2
+                     , base + 3
+                     )
+                   ]
+            , base + 4
+            )
+
+        ( vertices, indices, _ ) =
+            List.foldl step ( [], [], 0 ) tiles
+    in
+    WebGL.indexedTriangles vertices indices
 
 
 type alias Uniforms =
@@ -161,8 +189,6 @@ type alias Uniforms =
     , view : Mat4
     , model : Mat4
     , texture : Texture
-    , tileCoord : Vec2
-    , tileSizeUV : Vec2
     }
 
 
@@ -175,8 +201,6 @@ type alias Varyings =
   - position: original Mesh vertices (0..1 x 0..1)
   - projection: maps the world (Map.\*, eg. of size 8x5) to the canvas
   - model: translates the tile inside the world (eg. onto position (3,2))
-  - tileCoord: selects which tile from the tileset texture to sample
-  - tileSizeUV: one tile's size as fraction of the whole tileset texture
 
 The actual sampling (colors used for pixels, reading the texture pixels) is done
 in the fragmentShader below.
@@ -185,19 +209,18 @@ in the fragmentShader below.
 vertexShader : Shader Vertex Uniforms Varyings
 vertexShader =
     [glsl|
-        attribute vec2 position;
+        attribute vec2 worldPosition;
+        attribute vec2 texCoord;
 
         uniform mat4 projection;
         uniform mat4 view;
         uniform mat4 model;
-        uniform vec2 tileCoord;
-        uniform vec2 tileSizeUV;
 
         varying vec2 vTexCoord;
 
         void main () {
-            vTexCoord = (tileCoord + position) * tileSizeUV;
-            gl_Position = projection * view * model * vec4(position, 0.0, 1.0);
+            vTexCoord = texCoord;
+            gl_Position = projection * view * model * vec4(worldPosition, 0.0, 1.0);
         }
     |]
 

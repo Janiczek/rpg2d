@@ -12,7 +12,6 @@ import Keyboard
 import Lamdera
 import Map
 import Player exposing (Player)
-import Renderer
 import Sound exposing (Sound)
 import Tileset
 import Types exposing (FrontendModel, FrontendMsg(..), ToFrontend(..))
@@ -260,22 +259,10 @@ view model =
 
 viewDebug : Model -> Html msg
 viewDebug model =
-    let
-        tilesSent : Int
-        tilesSent =
-            Map.tiles
-                model.player
-                model.timeMs
-                model.camera
-                Camera.widthTiles
-                Camera.heightTiles
-                |> List.length
-    in
     Html.ul []
         [ Html.li [] [ Html.text <| "arrow keys: " ++ Debug.toString model.arrowKeys ]
         , Html.li [] [ Html.text <| "player: " ++ Debug.toString model.player ]
         , Html.li [] [ Html.text <| "camera: " ++ Debug.toString model.camera ]
-        , Html.li [] [ Html.text <| "tiles sent to GPU: " ++ String.fromInt tilesSent ]
         ]
 
 
@@ -286,18 +273,15 @@ viewGame model =
             Html.text "Loading tileset..."
 
         Just tileset ->
-            Map.tiles
-                model.player
+            Map.webGLEntities
                 model.timeMs
+                model.player
                 model.camera
                 Camera.widthTiles
                 Camera.heightTiles
-                |> List.map
-                    (Renderer.tileToWebGLEntity
-                        tileset
-                        Camera.projection
-                        (Camera.translateMatrix model.camera)
-                    )
+                tileset
+                Camera.projection
+                (Camera.translateMatrix model.camera)
                 |> WebGL.toHtml
                     [ Html.Attributes.width zoomedCanvasWidthPx
                     , Html.Attributes.height zoomedCanvasHeightPx
