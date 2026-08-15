@@ -22,7 +22,7 @@ import WebGL
 
 pxZoom : number
 pxZoom =
-    2
+    3
 
 
 unzoomedCanvasWidthPx : number
@@ -81,7 +81,7 @@ init _ _ =
             }
     in
     ( { tileset = Nothing
-      , lastPressedArrowKey = Nothing
+      , arrowKeys = []
       , timeMs = 0
       , player = player
       , camera = Camera.centeredAt player |> Camera.clamp
@@ -104,18 +104,11 @@ update msg model =
         GotKeys keyMsg ->
             let
                 keys =
-                    Keyboard.update keyMsg
-                        (case model.lastPressedArrowKey of
-                            Nothing ->
-                                []
+                    Keyboard.update keyMsg model.arrowKeys
 
-                            Just key ->
-                                [ key ]
-                        )
-
-                lastPressedArrowKey =
+                arrowKeys =
                     keys
-                        |> List.Extra.find
+                        |> List.filter
                             (\key ->
                                 (key == Keyboard.ArrowLeft)
                                     || (key == Keyboard.ArrowRight)
@@ -124,11 +117,11 @@ update msg model =
                             )
             in
             ( { model
-                | lastPressedArrowKey = lastPressedArrowKey
+                | arrowKeys = arrowKeys
                 , player =
                     if
-                        (lastPressedArrowKey == Nothing)
-                            && (model.lastPressedArrowKey /= Nothing)
+                        List.isEmpty arrowKeys
+                            && not (List.isEmpty model.arrowKeys)
                     then
                         -- stopped holding keys, let's disable the repeated movement throttle
                         model.player |> Player.disableRepeatedMovementThrottle
@@ -145,7 +138,7 @@ update msg model =
                     model.timeMs + dt
 
                 ( newPlayer, soundToPlay ) =
-                    tickPlayer newTimeMs model.lastPressedArrowKey model.player
+                    tickPlayer newTimeMs model.arrowKeys model.player
             in
             ( { model
                 | timeMs = newTimeMs
@@ -161,19 +154,19 @@ update msg model =
             )
 
 
-tickPlayer : Float -> Maybe Keyboard.Key -> Player -> ( Player, Maybe Sound )
-tickPlayer timeMs lastPressedArrowKey player =
+tickPlayer : Float -> List Keyboard.Key -> Player -> ( Player, Maybe Sound )
+tickPlayer timeMs arrowKeys player =
     player
-        |> walk lastPressedArrowKey timeMs
+        |> walk arrowKeys timeMs
 
 
-walk : Maybe Keyboard.Key -> Float -> Player -> ( Player, Maybe Sound )
-walk lastPressedArrowKey timeMs player =
-    case lastPressedArrowKey of
-        Nothing ->
+walk : List Keyboard.Key -> Float -> Player -> ( Player, Maybe Sound )
+walk arrowKeys timeMs player =
+    case arrowKeys of
+        [] ->
             ( player, Nothing )
 
-        Just lastArrowKey ->
+        lastArrowKey :: _ ->
             if Player.canDoRepeatedMovement timeMs player.lastMoveTimeMs then
                 let
                     goWith dir =
@@ -253,7 +246,7 @@ viewDebug model =
                 |> List.length
     in
     Html.ul []
-        [ Html.li [] [ Html.text <| "last pressed arrow key: " ++ Debug.toString model.lastPressedArrowKey ]
+        [ Html.li [] [ Html.text <| "arrow keys: " ++ Debug.toString model.arrowKeys ]
         , Html.li [] [ Html.text <| "player: " ++ Debug.toString model.player ]
         , Html.li [] [ Html.text <| "camera: " ++ Debug.toString model.camera ]
         , Html.li [] [ Html.text <| "tiles sent to GPU: " ++ String.fromInt tilesSent ]

@@ -41,12 +41,12 @@ type alias Camera =
 
 widthTiles : number
 widthTiles =
-    9
+    11
 
 
 heightTiles : number
 heightTiles =
-    5
+    7
 
 
 halfWidth : Float
