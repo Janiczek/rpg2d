@@ -48,8 +48,8 @@ blend =
     [ Blend.add Blend.srcAlpha Blend.oneMinusSrcAlpha ]
 
 
-meshToWebGLEntity : Tileset.LoadedTileset -> Mat4 -> Mat4 -> Mat4 -> Mesh -> Entity
-meshToWebGLEntity tileset cameraProjection cameraTranslateMatrix model mesh =
+meshToWebGLEntity : Tileset.LoadedTileset -> Mat4 -> Mat4 -> Mesh -> Entity
+meshToWebGLEntity tileset cameraProjection cameraTranslateMatrix mesh =
     WebGL.entityWith
         blend
         vertexShader
@@ -57,7 +57,6 @@ meshToWebGLEntity tileset cameraProjection cameraTranslateMatrix model mesh =
         mesh
         { projection = cameraProjection
         , view = cameraTranslateMatrix
-        , model = model
         , texture = tileset
         }
 
@@ -187,7 +186,6 @@ tilesToMesh tiles =
 type alias Uniforms =
     { projection : Mat4
     , view : Mat4
-    , model : Mat4
     , texture : Texture
     }
 
@@ -200,7 +198,6 @@ type alias Varyings =
 
   - position: original Mesh vertices (0..1 x 0..1)
   - projection: maps the world (Map.\*, eg. of size 8x5) to the canvas
-  - model: translates the tile inside the world (eg. onto position (3,2))
 
 The actual sampling (colors used for pixels, reading the texture pixels) is done
 in the fragmentShader below.
@@ -214,13 +211,12 @@ vertexShader =
 
         uniform mat4 projection;
         uniform mat4 view;
-        uniform mat4 model;
 
         varying vec2 vTexCoord;
 
         void main () {
             vTexCoord = texCoord;
-            gl_Position = projection * view * model * vec4(worldPosition, 0.0, 1.0);
+            gl_Position = projection * view * vec4(worldPosition, 0.0, 1.0);
         }
     |]
 

@@ -191,9 +191,9 @@ playerMesh timeMs p =
 webGLEntities : Float -> Player -> { camera | x : Float, y : Float } -> Float -> Float -> Tileset.LoadedTileset -> Mat4 -> Mat4 -> List WebGL.Entity
 webGLEntities timeMs player camera cameraWidth cameraHeight tileset cameraProjection cameraTranslateMatrix =
     [ mapMesh camera cameraWidth cameraHeight
-        |> Renderer.meshToWebGLEntity tileset cameraProjection cameraTranslateMatrix Mat4.identity
+        |> Renderer.meshToWebGLEntity tileset cameraProjection cameraTranslateMatrix
     , playerMesh timeMs player
-        |> Renderer.meshToWebGLEntity tileset cameraProjection cameraTranslateMatrix Mat4.identity
+        |> Renderer.meshToWebGLEntity tileset cameraProjection cameraTranslateMatrix
     ]
 
 
