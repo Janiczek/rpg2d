@@ -1,6 +1,6 @@
 module Renderer exposing
     ( Tile, tile
-    , Mesh, Vertex, tilesToMesh, meshToWebGLEntity
+    , Mesh, Vertex, tilesToMesh, meshToWebGLEntity, emptyMesh
     , noRotation, rotateClockwise, rotate180, rotateAnticlockwise
     )
 
@@ -10,7 +10,7 @@ module Renderer exposing
 ## Renderables
 
 @docs Tile, tile
-@docs Mesh, Vertex, tilesToMesh, meshToWebGLEntity
+@docs Mesh, Vertex, tilesToMesh, meshToWebGLEntity, emptyMesh
 
 
 ## Rotations
@@ -115,6 +115,11 @@ type alias Vertex =
 
 type alias Mesh =
     WebGL.Mesh Vertex
+
+
+emptyMesh : Mesh
+emptyMesh =
+    WebGL.points []
 
 
 tileVertices : Tile -> List Vertex

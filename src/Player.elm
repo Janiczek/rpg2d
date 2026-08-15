@@ -3,6 +3,7 @@ module Player exposing
     , movementSpeedMsPerTile
     , canDoRepeatedMovement, disableRepeatedMovementThrottle
     , position
+    , recomputeMesh
     )
 
 {-|
@@ -10,13 +11,16 @@ module Player exposing
 @docs Player, Movement
 @docs movementSpeedMsPerTile
 @docs canDoRepeatedMovement, disableRepeatedMovementThrottle
-@docs Position
+@docs position
+@docs recomputeMesh
 
 -}
 
+import Constants
 import Direction exposing (Direction)
 import Ease exposing (Easing)
 import Lerp
+import Renderer
 import Tileset
 
 
@@ -29,6 +33,7 @@ type alias Player =
       -- waiting for another repeated movement "tick"
       lastMoveTimeMs : Float
     , movement : Maybe Movement
+    , mesh : Renderer.Mesh
     }
 
 
@@ -72,3 +77,21 @@ position easing timeMs player =
             ( Lerp.roundToPixels Tileset.tileWidthPx <| Lerp.lerp easing pct mvmt.origX (toFloat player.x)
             , Lerp.roundToPixels Tileset.tileHeightPx <| Lerp.lerp easing pct mvmt.origY (toFloat player.y)
             )
+
+
+playerTile : ( number, number )
+playerTile =
+    Tileset.coord Tileset.T_Player
+
+
+recomputeMesh : Float -> Player -> Player
+recomputeMesh timeMs p =
+    let
+        ( px, py ) =
+            position Constants.playerEasing timeMs p
+    in
+    { p
+        | mesh =
+            Renderer.tilesToMesh
+                [ Renderer.tile px py playerTile (Direction.rotation p.direction) ]
+    }

@@ -12,6 +12,7 @@ import Keyboard
 import Lamdera
 import Map
 import Player exposing (Player)
+import Renderer
 import Sound exposing (Sound)
 import Tileset
 import Types exposing (FrontendModel, FrontendMsg(..), ToFrontend(..))
@@ -66,6 +67,9 @@ subscriptions _ =
 init : Url.Url -> Nav.Key -> ( Model, Cmd FrontendMsg )
 init _ _ =
     let
+        timeMs =
+            0
+
         player : Player
         player =
             { x = Map.initPlayerX
@@ -73,11 +77,13 @@ init _ _ =
             , direction = Down
             , lastMoveTimeMs = 0
             , movement = Nothing
+            , mesh = Renderer.emptyMesh
             }
+                |> Player.recomputeMesh timeMs
     in
     ( { tileset = Nothing
       , arrowKeys = []
-      , timeMs = 0
+      , timeMs = timeMs
       , player = player
       , camera =
             Camera.centeredAt player 0
@@ -157,7 +163,8 @@ tickPlayer : Float -> List Keyboard.Key -> Player -> ( Player, Maybe Sound )
 tickPlayer timeMs arrowKeys player =
     player
         |> endMovement timeMs
-        |> walk arrowKeys timeMs
+        |> recomputePlayerMesh timeMs
+        |> startMovement arrowKeys timeMs
 
 
 endMovement : Float -> Player -> Player
@@ -169,13 +176,25 @@ endMovement timeMs player =
         Just movement ->
             if (timeMs - movement.moveStartMs) >= Player.movementSpeedMsPerTile then
                 { player | movement = Nothing }
+                    |> Player.recomputeMesh timeMs
 
             else
                 player
 
 
-walk : List Keyboard.Key -> Float -> Player -> ( Player, Maybe Sound )
-walk arrowKeys timeMs player =
+recomputePlayerMesh : Float -> Player -> Player
+recomputePlayerMesh timeMs player =
+    case player.movement of
+        Nothing ->
+            player
+
+        Just _ ->
+            player
+                |> Player.recomputeMesh timeMs
+
+
+startMovement : List Keyboard.Key -> Float -> Player -> ( Player, Maybe Sound )
+startMovement arrowKeys timeMs player =
     case arrowKeys of
         [] ->
             ( player, Nothing )
@@ -200,6 +219,7 @@ walk arrowKeys timeMs player =
                                 | lastMoveTimeMs = timeMs
                                 , direction = dir
                               }
+                                |> Player.recomputeMesh timeMs
                             , Just Sound.Bounce
                             )
 
@@ -216,6 +236,7 @@ walk arrowKeys timeMs player =
                                         , moveStartMs = timeMs
                                         }
                               }
+                                |> Player.recomputeMesh timeMs
                             , Nothing
                             )
                 in
@@ -251,19 +272,12 @@ view : Model -> Browser.Document FrontendMsg
 view model =
     { title = "2D RPG"
     , body =
-        [ viewDebug model
-        , viewGame model
+        [ {- viewDebug model
+             ,
+          -}
+          viewGame model
         ]
     }
-
-
-viewDebug : Model -> Html msg
-viewDebug model =
-    Html.ul []
-        [ Html.li [] [ Html.text <| "arrow keys: " ++ Debug.toString model.arrowKeys ]
-        , Html.li [] [ Html.text <| "player: " ++ Debug.toString model.player ]
-        , Html.li [] [ Html.text <| "camera: " ++ Debug.toString model.camera ]
-        ]
 
 
 viewGame : Model -> Html msg
@@ -274,11 +288,7 @@ viewGame model =
 
         Just tileset ->
             Map.webGLEntities
-                model.timeMs
-                model.player
-                model.camera
-                Camera.widthTiles
-                Camera.heightTiles
+                model.player.mesh
                 tileset
                 Camera.projection
                 (Camera.translateMatrix model.camera)

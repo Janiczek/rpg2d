@@ -12,11 +12,8 @@ module Map exposing
 
 -}
 
-import Constants
-import Direction
 import List.Cartesian
-import Math.Matrix4 as Mat4 exposing (Mat4)
-import Player exposing (Player)
+import Math.Matrix4 exposing (Mat4)
 import Renderer
 import Set exposing (Set)
 import Tileset exposing (TileType(..))
@@ -87,11 +84,6 @@ grass4Tile =
     Tileset.coord T_Grass4
 
 
-playerTile : ( number, number )
-playerTile =
-    Tileset.coord T_Player
-
-
 wallTile : ( number, number )
 wallTile =
     Tileset.coord T_Wall
@@ -149,63 +141,18 @@ layer1Walls =
         |> List.map (\( x, y ) -> Renderer.tile (toFloat x) (toFloat y) wallTile Renderer.noRotation)
 
 
-{-| Everything except for the player.
--}
-mapMesh : { camera | x : Float, y : Float } -> Float -> Float -> Renderer.Mesh
-mapMesh camera cameraWidth cameraHeight =
-    -- TODO try and measure without the filtering
-    let
-        cameraLeft : Float
-        cameraLeft =
-            camera.x
-
-        cameraRight : Float
-        cameraRight =
-            cameraLeft + cameraWidth - 1
-
-        cameraTop : Float
-        cameraTop =
-            camera.y
-
-        cameraBottom : Float
-        cameraBottom =
-            cameraTop + cameraHeight - 1
-    in
+staticTilesMesh : Renderer.Mesh
+staticTilesMesh =
     (layer0Grass ++ layer1Walls)
-        -- Later with dynamic maps we'd want the actual List.range generation to be
-        -- constrained, not List.filter after the fact.
-        |> List.filter (isVisible cameraLeft cameraRight cameraTop cameraBottom)
         |> Renderer.tilesToMesh
 
 
-playerMesh : Float -> Player -> Renderer.Mesh
-playerMesh timeMs p =
-    let
-        ( px, py ) =
-            Player.position Constants.playerEasing timeMs p
-    in
-    Renderer.tilesToMesh
-        [ Renderer.tile px py playerTile (Direction.rotation p.direction) ]
-
-
-webGLEntities : Float -> Player -> { camera | x : Float, y : Float } -> Float -> Float -> Tileset.LoadedTileset -> Mat4 -> Mat4 -> List WebGL.Entity
-webGLEntities timeMs player camera cameraWidth cameraHeight tileset cameraProjection cameraTranslateMatrix =
-    [ mapMesh camera cameraWidth cameraHeight
-        |> Renderer.meshToWebGLEntity tileset cameraProjection cameraTranslateMatrix
-    , playerMesh timeMs player
-        |> Renderer.meshToWebGLEntity tileset cameraProjection cameraTranslateMatrix
+webGLEntities : Renderer.Mesh -> Tileset.LoadedTileset -> Mat4 -> Mat4 -> List WebGL.Entity
+webGLEntities playerMesh_ tileset cameraProjection cameraTranslateMatrix =
+    [ staticTilesMesh
+    , playerMesh_
     ]
-
-
-{-| We'll add 1 tile safety margin for cases where the player is moving and
-would see a new tile gradually appear.
--}
-isVisible : Float -> Float -> Float -> Float -> Renderer.Tile -> Bool
-isVisible cameraLeft cameraRight cameraTop cameraBottom tile =
-    (tile.sceneX >= cameraLeft - 1)
-        && (tile.sceneX <= cameraRight + 1)
-        && (tile.sceneY >= cameraTop - 1)
-        && (tile.sceneY <= cameraBottom + 1)
+        |> List.map (Renderer.meshToWebGLEntity tileset cameraProjection cameraTranslateMatrix)
 
 
 hasSolid : Int -> Int -> Bool
