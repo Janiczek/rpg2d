@@ -7,7 +7,7 @@ import Camera
 import Direction exposing (Direction(..))
 import Html exposing (Html)
 import Html.Attributes
-import Keyboard
+import Keyboard exposing (Key(..))
 import Lamdera
 import List.Extra
 import Map
@@ -78,13 +78,16 @@ init _ _ =
             , y = Map.initPlayerY
             , direction = Down
             , lastMoveTimeMs = 0
+            , movement = Nothing
             }
     in
     ( { tileset = Nothing
       , arrowKeys = []
       , timeMs = 0
       , player = player
-      , camera = Camera.centeredAt player |> Camera.clamp
+      , camera =
+            Camera.centeredAt player 0
+                |> Camera.clamp
       }
     , Tileset.load LoadedTileset
     )
@@ -143,7 +146,9 @@ update msg model =
             ( { model
                 | timeMs = newTimeMs
                 , player = newPlayer
-                , camera = Camera.centeredAt newPlayer |> Camera.clamp
+                , camera =
+                    Camera.centeredAt newPlayer newTimeMs
+                        |> Camera.clamp
               }
             , case soundToPlay of
                 Nothing ->
@@ -157,7 +162,22 @@ update msg model =
 tickPlayer : Float -> List Keyboard.Key -> Player -> ( Player, Maybe Sound )
 tickPlayer timeMs arrowKeys player =
     player
+        |> endMovement timeMs
         |> walk arrowKeys timeMs
+
+
+endMovement : Float -> Player -> Player
+endMovement timeMs player =
+    case player.movement of
+        Nothing ->
+            player
+
+        Just movement ->
+            if (timeMs - movement.moveStartMs) >= Player.movementSpeedMsPerTile then
+                { player | movement = Nothing }
+
+            else
+                player
 
 
 walk : List Keyboard.Key -> Float -> Player -> ( Player, Maybe Sound )
@@ -167,7 +187,7 @@ walk arrowKeys timeMs player =
             ( player, Nothing )
 
         lastArrowKey :: _ ->
-            if Player.canDoRepeatedMovement timeMs player.lastMoveTimeMs then
+            if Player.canDoRepeatedMovement player then
                 let
                     goWith dir =
                         let
@@ -181,6 +201,7 @@ walk arrowKeys timeMs player =
                                 player.y + dy
                         in
                         if Map.hasSolid targetX targetY then
+                            -- Can't move there: collision!
                             ( { player | lastMoveTimeMs = timeMs }
                             , Just Sound.Bounce
                             )
@@ -191,6 +212,12 @@ walk arrowKeys timeMs player =
                                 , y = targetY
                                 , direction = dir
                                 , lastMoveTimeMs = timeMs
+                                , movement =
+                                    Just
+                                        { origX = toFloat player.x
+                                        , origY = toFloat player.y
+                                        , moveStartMs = timeMs
+                                        }
                               }
                             , Nothing
                             )

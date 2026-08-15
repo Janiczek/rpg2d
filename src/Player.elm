@@ -1,19 +1,30 @@
 module Player exposing
-    ( Player
+    ( Movement
+    , Player
     , canDoRepeatedMovement
     , disableRepeatedMovementThrottle
+    , movementSpeedMsPerTile
     )
 
 import Direction exposing (Direction)
 
 
 type alias Player =
+    -- logical x,y position - during movement, the final one
     { x : Int
     , y : Int
     , direction : Direction
     , -- >0 = we're currently holding something after we've moved:
       -- waiting for another repeated movement "tick"
       lastMoveTimeMs : Float
+    , movement : Maybe Movement
+    }
+
+
+type alias Movement =
+    { origX : Float
+    , origY : Float
+    , moveStartMs : Float
     }
 
 
@@ -22,13 +33,11 @@ disableRepeatedMovementThrottle p =
     { p | lastMoveTimeMs = 0 }
 
 
-{-| The player will move in discrete jumps, 1 jump per this many ms
--}
-repeatedWalkSpeedMsPerTile : Float
-repeatedWalkSpeedMsPerTile =
+movementSpeedMsPerTile : Float
+movementSpeedMsPerTile =
     150
 
 
-canDoRepeatedMovement : Float -> Float -> Bool
-canDoRepeatedMovement timeMs playerLastMoveTimeMs =
-    timeMs - playerLastMoveTimeMs >= repeatedWalkSpeedMsPerTile
+canDoRepeatedMovement : Player -> Bool
+canDoRepeatedMovement player =
+    player.movement == Nothing

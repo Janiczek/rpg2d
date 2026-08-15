@@ -31,6 +31,7 @@ module Camera exposing
 
 import Map
 import Math.Matrix4 as Mat4 exposing (Mat4)
+import Player exposing (Player)
 
 
 type alias Camera =
@@ -62,10 +63,27 @@ halfHeight =
 {-| Makes sense for odd camera width+height.
 A bit uneven (biased towards bottom right) for even width+height.
 -}
-centeredAt : { xy | x : Int, y : Int } -> Camera
-centeredAt { x, y } =
-    { x = toFloat x - halfWidth
-    , y = toFloat y - halfHeight
+centeredAt : Player -> Float -> Camera
+centeredAt p timeMs =
+    let
+        ( currentX, currentY ) =
+            case p.movement of
+                Nothing ->
+                    ( toFloat p.x, toFloat p.y )
+
+                Just mvmt ->
+                    -- TODO we could be more performant if we looked at Direction and only lerped one of the numbers
+                    let
+                        -- How far along the movement we are
+                        percentage =
+                            Basics.clamp 0 1 <| (timeMs - mvmt.moveStartMs) / Player.movementSpeedMsPerTile
+                    in
+                    ( mvmt.origX + ((toFloat p.x - mvmt.origX) * percentage)
+                    , mvmt.origY + ((toFloat p.y - mvmt.origY) * percentage)
+                    )
+    in
+    { x = currentX - halfWidth
+    , y = currentY - halfHeight
     }
 
 
