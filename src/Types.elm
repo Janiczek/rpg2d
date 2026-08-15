@@ -16,7 +16,7 @@ import WebGL.Texture exposing (Texture)
 
 type alias FrontendModel =
     { tileset : Maybe Texture
-    , keys : List Keyboard.Key
+    , lastPressedArrowKey : Maybe Keyboard.Key
     , timeMs : Float
     , player : Player
     , camera : Camera

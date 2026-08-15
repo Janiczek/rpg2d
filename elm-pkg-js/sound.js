@@ -7,9 +7,15 @@ const sounds = {
 };
 
 exports.init = async function (app) {
-  app.ports.playSound.subscribe(function (sound) {
-    if (sound in sounds) {
-      sounds[sound].play();
+  app.ports.playSound.subscribe(async function (soundName) {
+    if (soundName in sounds) {
+      const sound = sounds[soundName];
+      if (sound.paused) {
+        sound.play();
+      } else {
+        // already playing, just seek it to beginning
+        sound.currentTime = 0;
+      }
     }
   });
 };

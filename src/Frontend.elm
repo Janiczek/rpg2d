@@ -9,6 +9,7 @@ import Html exposing (Html)
 import Html.Attributes
 import Keyboard
 import Lamdera
+import List.Extra
 import Map
 import Player exposing (Player)
 import Renderer
@@ -80,7 +81,7 @@ init _ _ =
             }
     in
     ( { tileset = Nothing
-      , keys = []
+      , lastPressedArrowKey = Nothing
       , timeMs = 0
       , player = player
       , camera = Camera.centeredAt player |> Camera.clamp
@@ -103,9 +104,38 @@ update msg model =
         GotKeys keyMsg ->
             let
                 keys =
-                    Keyboard.update keyMsg model.keys
+                    Keyboard.update keyMsg
+                        (case model.lastPressedArrowKey of
+                            Nothing ->
+                                []
+
+                            Just key ->
+                                [ key ]
+                        )
+
+                lastPressedArrowKey =
+                    keys
+                        |> List.Extra.find
+                            (\key ->
+                                (key == Keyboard.ArrowLeft)
+                                    || (key == Keyboard.ArrowRight)
+                                    || (key == Keyboard.ArrowUp)
+                                    || (key == Keyboard.ArrowDown)
+                            )
             in
-            ( { model | keys = keys }
+            ( { model
+                | lastPressedArrowKey = lastPressedArrowKey
+                , player =
+                    if
+                        (lastPressedArrowKey == Nothing)
+                            && (model.lastPressedArrowKey /= Nothing)
+                    then
+                        -- stopped holding keys, let's disable the repeated movement throttle
+                        model.player |> Player.disableRepeatedMovementThrottle
+
+                    else
+                        model.player
+              }
             , Cmd.none
             )
 
@@ -115,7 +145,7 @@ update msg model =
                     model.timeMs + dt
 
                 ( newPlayer, soundToPlay ) =
-                    tickPlayer newTimeMs model.keys model.player
+                    tickPlayer newTimeMs model.lastPressedArrowKey model.player
             in
             ( { model
                 | timeMs = newTimeMs
@@ -131,67 +161,43 @@ update msg model =
             )
 
 
-tickPlayer : Float -> List Keyboard.Key -> Player -> ( Player, Maybe Sound )
-tickPlayer timeMs keys player =
-    let
-        arrowKeys =
-            keys
-                |> List.filter
-                    (\key ->
-                        (key == Keyboard.ArrowLeft)
-                            || (key == Keyboard.ArrowRight)
-                            || (key == Keyboard.ArrowUp)
-                            || (key == Keyboard.ArrowDown)
-                    )
-    in
+tickPlayer : Float -> Maybe Keyboard.Key -> Player -> ( Player, Maybe Sound )
+tickPlayer timeMs lastPressedArrowKey player =
     player
-        |> walk arrowKeys timeMs
+        |> walk lastPressedArrowKey timeMs
 
 
-{-| The player will move in discrete jumps, 1 jump per this many ms
--}
-walkSpeedMsPerTile : Float
-walkSpeedMsPerTile =
-    250
+walk : Maybe Keyboard.Key -> Float -> Player -> ( Player, Maybe Sound )
+walk lastPressedArrowKey timeMs player =
+    case lastPressedArrowKey of
+        Nothing ->
+            ( player, Nothing )
 
-
-isThrottlingRepeatedMovement : Float -> Float -> Bool
-isThrottlingRepeatedMovement timeMs playerLastMoveTimeMs =
-    timeMs - playerLastMoveTimeMs < walkSpeedMsPerTile
-
-
-walk : List Keyboard.Key -> Float -> Player -> ( Player, Maybe Sound )
-walk arrowKeys timeMs player =
-    if isThrottlingRepeatedMovement timeMs player.lastMoveTimeMs then
-        -- Ignore, too soon after previous movement.
-        ( player, Nothing )
-
-    else
-        case arrowKeys of
-            [] ->
-                ( player, Nothing )
-
-            lastArrowKey :: _ ->
+        Just lastArrowKey ->
+            if Player.canDoRepeatedMovement timeMs player.lastMoveTimeMs then
                 let
                     goWith dir =
                         let
                             ( dx, dy ) =
                                 Direction.delta dir
 
-                            newX =
+                            targetX =
                                 player.x + dx
 
-                            newY =
+                            targetY =
                                 player.y + dy
                         in
-                        if Map.hasSolid newX newY then
-                            ( player, Just Sound.Bounce )
+                        if Map.hasSolid targetX targetY then
+                            ( { player | lastMoveTimeMs = timeMs }
+                            , Just Sound.Bounce
+                            )
 
                         else
-                            ( { x = newX
-                              , y = newY
-                              , direction = dir
-                              , lastMoveTimeMs = timeMs
+                            ( { player
+                                | x = targetX
+                                , y = targetY
+                                , direction = dir
+                                , lastMoveTimeMs = timeMs
                               }
                             , Nothing
                             )
@@ -211,6 +217,10 @@ walk arrowKeys timeMs player =
 
                     _ ->
                         ( player, Nothing )
+
+            else
+                -- Ignore, too soon after previous movement.
+                ( player, Nothing )
 
 
 updateFromBackend : ToFrontend -> Model -> ( Model, Cmd FrontendMsg )
@@ -243,7 +253,7 @@ viewDebug model =
                 |> List.length
     in
     Html.ul []
-        [ Html.li [] [ Html.text <| "keys: " ++ Debug.toString model.keys ]
+        [ Html.li [] [ Html.text <| "last pressed arrow key: " ++ Debug.toString model.lastPressedArrowKey ]
         , Html.li [] [ Html.text <| "player: " ++ Debug.toString model.player ]
         , Html.li [] [ Html.text <| "camera: " ++ Debug.toString model.camera ]
         , Html.li [] [ Html.text <| "tiles sent to GPU: " ++ String.fromInt tilesSent ]

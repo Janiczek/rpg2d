@@ -2,9 +2,6 @@
 
 ## Todo:
 
-### Player movement
-- [ ] Player gradually lerps to the next position when moving, instead of teleporting there
-
 ### Player animation
 - [ ] Player sprite animates when moving or trying to move
 
