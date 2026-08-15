@@ -62,7 +62,7 @@ app =
 
 
 subscriptions : Model -> Sub FrontendMsg
-subscriptions model =
+subscriptions _ =
     Sub.batch
         [ Keyboard.subscriptions |> Sub.map GotKeys
         , Browser.Events.onAnimationFrameDelta Tick

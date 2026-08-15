@@ -4,7 +4,7 @@ module Direction exposing
     , rotation
     )
 
-import Math.Matrix4 as Mat4 exposing (Mat4)
+import Math.Matrix4 exposing (Mat4)
 import Renderer
 
 

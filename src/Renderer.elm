@@ -25,7 +25,7 @@ module Renderer exposing
 
 import Math.Matrix4 as Mat4 exposing (Mat4)
 import Math.Vector2 as Vec2 exposing (Vec2)
-import Math.Vector3 as Vec3 exposing (Vec3)
+import Math.Vector3 as Vec3
 import Tileset
 import WebGL exposing (Entity, Mesh, Shader)
 import WebGL.Settings exposing (Setting)
