@@ -125,7 +125,7 @@ layer0Grass =
                         _ ->
                             grass1Tile
             in
-            Renderer.tile x y tile Renderer.noRotation
+            Renderer.tile (toFloat x) (toFloat y) tile Renderer.noRotation
         )
         allXs
         allYs
@@ -144,29 +144,32 @@ layer1Walls : List Renderer.Tile
 layer1Walls =
     wallCoords
         |> Set.toList
-        |> List.map (\( x, y ) -> Renderer.tile x y wallTile Renderer.noRotation)
+        |> List.map (\( x, y ) -> Renderer.tile (toFloat x) (toFloat y) wallTile Renderer.noRotation)
 
 
-tiles : Player -> { camera | x : Float, y : Float } -> Int -> Int -> List Renderer.Tile
-tiles p camera cameraWidth cameraHeight =
+tiles : Player -> Float -> { camera | x : Float, y : Float } -> Float -> Float -> List Renderer.Tile
+tiles p timeMs camera cameraWidth cameraHeight =
     let
+        ( px, py ) =
+            Player.lerpPosition timeMs p
+
         player : Renderer.Tile
         player =
-            Renderer.tile p.x p.y playerTile (Direction.rotation p.direction)
+            Renderer.tile px py playerTile (Direction.rotation p.direction)
 
-        cameraLeft : Int
+        cameraLeft : Float
         cameraLeft =
-            truncate camera.x
+            camera.x
 
-        cameraRight : Int
+        cameraRight : Float
         cameraRight =
             cameraLeft + cameraWidth - 1
 
-        cameraTop : Int
+        cameraTop : Float
         cameraTop =
-            truncate camera.y
+            camera.y
 
-        cameraBottom : Int
+        cameraBottom : Float
         cameraBottom =
             cameraTop + cameraHeight - 1
     in
@@ -176,7 +179,7 @@ tiles p camera cameraWidth cameraHeight =
         |> List.filter (isVisible cameraLeft cameraRight cameraTop cameraBottom)
 
 
-isVisible : Int -> Int -> Int -> Int -> Renderer.Tile -> Bool
+isVisible : Float -> Float -> Float -> Float -> Renderer.Tile -> Bool
 isVisible cameraLeft cameraRight cameraTop cameraBottom tile =
     (tile.sceneX >= cameraLeft)
         && (tile.sceneX <= cameraRight)

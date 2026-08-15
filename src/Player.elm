@@ -3,6 +3,7 @@ module Player exposing
     , Player
     , canDoRepeatedMovement
     , disableRepeatedMovementThrottle
+    , lerpPosition
     , movementSpeedMsPerTile
     )
 
@@ -38,6 +39,34 @@ movementSpeedMsPerTile =
     150
 
 
-canDoRepeatedMovement : Player -> Bool
-canDoRepeatedMovement player =
-    player.movement == Nothing
+canDoRepeatedMovement : Float -> Player -> Bool
+canDoRepeatedMovement timeMs player =
+    (player.movement == Nothing)
+        && (timeMs - player.lastMoveTimeMs >= movementSpeedMsPerTile)
+
+
+{-| Assumes a clamped percentage 0..1
+-}
+lerp : Float -> Float -> Float -> Float
+lerp pct a b =
+    a + (b - a) * pct
+
+
+{-| Position for movement between tiles
+-}
+lerpPosition : Float -> Player -> ( Float, Float )
+lerpPosition timeMs player =
+    case player.movement of
+        Nothing ->
+            ( toFloat player.x, toFloat player.y )
+
+        Just mvmt ->
+            -- TODO we could be more performant if we looked at Direction and only lerped one of the numbers
+            let
+                -- How far along the movement we are
+                percentage =
+                    Basics.clamp 0 1 <| (timeMs - mvmt.moveStartMs) / movementSpeedMsPerTile
+            in
+            ( lerp percentage mvmt.origX (toFloat player.x)
+            , lerp percentage mvmt.origY (toFloat player.y)
+            )

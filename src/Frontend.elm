@@ -7,9 +7,8 @@ import Camera
 import Direction exposing (Direction(..))
 import Html exposing (Html)
 import Html.Attributes
-import Keyboard exposing (Key(..))
+import Keyboard
 import Lamdera
-import List.Extra
 import Map
 import Player exposing (Player)
 import Renderer
@@ -187,7 +186,7 @@ walk arrowKeys timeMs player =
             ( player, Nothing )
 
         lastArrowKey :: _ ->
-            if Player.canDoRepeatedMovement player then
+            if Player.canDoRepeatedMovement timeMs player then
                 let
                     goWith dir =
                         let
@@ -202,7 +201,10 @@ walk arrowKeys timeMs player =
                         in
                         if Map.hasSolid targetX targetY then
                             -- Can't move there: collision!
-                            ( { player | lastMoveTimeMs = timeMs }
+                            ( { player
+                                | lastMoveTimeMs = timeMs
+                                , direction = dir
+                              }
                             , Just Sound.Bounce
                             )
 
@@ -267,6 +269,7 @@ viewDebug model =
         tilesSent =
             Map.tiles
                 model.player
+                model.timeMs
                 model.camera
                 Camera.widthTiles
                 Camera.heightTiles
@@ -289,6 +292,7 @@ viewGame model =
         Just tileset ->
             Map.tiles
                 model.player
+                model.timeMs
                 model.camera
                 Camera.widthTiles
                 Camera.heightTiles

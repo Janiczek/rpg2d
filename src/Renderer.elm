@@ -36,8 +36,8 @@ import WebGL.Texture exposing (Texture)
 type alias Tile =
     { tileCoord : Vec2
     , rotation : Mat4 -> Mat4
-    , sceneX : Int
-    , sceneY : Int
+    , sceneX : Float
+    , sceneY : Float
     }
 
 
@@ -61,7 +61,7 @@ tileToWebGLEntity tileset cameraProjection cameraTranslateMatrix t =
         { projection = cameraProjection
         , view = cameraTranslateMatrix
         , model =
-            Mat4.makeTranslate3 (toFloat t.sceneX) (toFloat t.sceneY) 0
+            Mat4.makeTranslate3 t.sceneX t.sceneY 0
                 |> t.rotation
         , texture = tileset
         , tileCoord = t.tileCoord
@@ -69,7 +69,7 @@ tileToWebGLEntity tileset cameraProjection cameraTranslateMatrix t =
         }
 
 
-tile : Int -> Int -> Vec2 -> (Mat4 -> Mat4) -> Tile
+tile : Float -> Float -> Vec2 -> (Mat4 -> Mat4) -> Tile
 tile sceneX sceneY tileCoord rotation =
     { tileCoord = tileCoord
     , rotation = rotation

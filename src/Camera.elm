@@ -66,24 +66,11 @@ A bit uneven (biased towards bottom right) for even width+height.
 centeredAt : Player -> Float -> Camera
 centeredAt p timeMs =
     let
-        ( currentX, currentY ) =
-            case p.movement of
-                Nothing ->
-                    ( toFloat p.x, toFloat p.y )
-
-                Just mvmt ->
-                    -- TODO we could be more performant if we looked at Direction and only lerped one of the numbers
-                    let
-                        -- How far along the movement we are
-                        percentage =
-                            Basics.clamp 0 1 <| (timeMs - mvmt.moveStartMs) / Player.movementSpeedMsPerTile
-                    in
-                    ( mvmt.origX + ((toFloat p.x - mvmt.origX) * percentage)
-                    , mvmt.origY + ((toFloat p.y - mvmt.origY) * percentage)
-                    )
+        ( x, y ) =
+            Player.lerpPosition timeMs p
     in
-    { x = currentX - halfWidth
-    , y = currentY - halfHeight
+    { x = x - halfWidth
+    , y = y - halfHeight
     }
 
 
