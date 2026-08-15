@@ -47,9 +47,22 @@ canDoRepeatedMovement timeMs player =
 
 {-| Assumes a clamped percentage 0..1
 -}
-lerp : Float -> Float -> Float -> Float
-lerp pct a b =
+linearLerp : Float -> Float -> Float -> Float
+linearLerp pct a b =
     a + (b - a) * pct
+
+
+{-| Assumes a clamped percentage 0..1
+The decay parameter is useful around range 2..20 (2=slowest)
+-}
+expDecayLerp : Float -> Float -> Float -> Float -> Float
+expDecayLerp decay pct a b =
+    b + (a - b) * (Basics.e ^ (-decay * pct))
+
+
+percentage : Float -> Float -> Float -> Float
+percentage start current totalDuration =
+    Basics.clamp 0 1 ((current - start) / totalDuration)
 
 
 {-| Position for movement between tiles
@@ -63,10 +76,12 @@ lerpPosition timeMs player =
         Just mvmt ->
             -- TODO we could be more performant if we looked at Direction and only lerped one of the numbers
             let
-                -- How far along the movement we are
-                percentage =
-                    Basics.clamp 0 1 <| (timeMs - mvmt.moveStartMs) / movementSpeedMsPerTile
+                pct =
+                    percentage mvmt.moveStartMs timeMs movementSpeedMsPerTile
             in
-            ( lerp percentage mvmt.origX (toFloat player.x)
-            , lerp percentage mvmt.origY (toFloat player.y)
+            --( linearLerp pct mvmt.origX (toFloat player.x)
+            --, linearLerp pct mvmt.origY (toFloat player.y)
+            --)
+            ( expDecayLerp 2 pct mvmt.origX (toFloat player.x)
+            , expDecayLerp 2 pct mvmt.origY (toFloat player.y)
             )
