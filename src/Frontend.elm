@@ -4,6 +4,7 @@ import Browser
 import Browser.Events
 import Browser.Navigation as Nav
 import Camera
+import Constants
 import Direction exposing (Direction(..))
 import Html exposing (Html)
 import Html.Attributes
@@ -19,11 +20,6 @@ import Url
 import WebGL
 
 
-pxZoom : number
-pxZoom =
-    3
-
-
 unzoomedCanvasWidthPx : number
 unzoomedCanvasWidthPx =
     Camera.widthTiles * Tileset.tileWidthPx
@@ -36,12 +32,12 @@ unzoomedCanvasHeightPx =
 
 zoomedCanvasWidthPx : number
 zoomedCanvasWidthPx =
-    pxZoom * unzoomedCanvasWidthPx
+    Constants.pxZoom * unzoomedCanvasWidthPx
 
 
 zoomedCanvasHeightPx : number
 zoomedCanvasHeightPx =
-    pxZoom * unzoomedCanvasHeightPx
+    Constants.pxZoom * unzoomedCanvasHeightPx
 
 
 type alias Model =

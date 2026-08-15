@@ -1,6 +1,7 @@
 module Constants exposing
     ( cameraEasing
     , playerEasing
+    , pxZoom
     )
 
 import Ease exposing (Easing)
@@ -14,3 +15,8 @@ playerEasing =
 cameraEasing : Easing
 cameraEasing =
     playerEasing
+
+
+pxZoom : number
+pxZoom =
+    4
