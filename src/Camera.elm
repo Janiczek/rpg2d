@@ -42,7 +42,7 @@ type alias Camera =
 
 widthTiles : number
 widthTiles =
-    11
+    9
 
 
 heightTiles : number

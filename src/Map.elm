@@ -23,12 +23,12 @@ import Tileset exposing (TileType(..))
 
 widthTiles : number
 widthTiles =
-    13
+    15
 
 
 heightTiles : number
 heightTiles =
-    9
+    11
 
 
 lastColumn : number
@@ -179,12 +179,15 @@ tiles p timeMs camera cameraWidth cameraHeight =
         |> List.filter (isVisible cameraLeft cameraRight cameraTop cameraBottom)
 
 
+{-| We'll add 1 tile safety margin for cases where the player is moving and
+would see a new tile gradually appear.
+-}
 isVisible : Float -> Float -> Float -> Float -> Renderer.Tile -> Bool
 isVisible cameraLeft cameraRight cameraTop cameraBottom tile =
-    (tile.sceneX >= cameraLeft)
-        && (tile.sceneX <= cameraRight)
-        && (tile.sceneY >= cameraTop)
-        && (tile.sceneY <= cameraBottom)
+    (tile.sceneX >= cameraLeft - 1)
+        && (tile.sceneX <= cameraRight + 1)
+        && (tile.sceneY >= cameraTop - 1)
+        && (tile.sceneY <= cameraBottom + 1)
 
 
 hasSolid : Int -> Int -> Bool
