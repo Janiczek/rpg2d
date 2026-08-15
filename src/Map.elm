@@ -12,6 +12,7 @@ module Map exposing
 
 -}
 
+import Constants
 import Direction
 import List.Cartesian
 import Math.Vector2 exposing (Vec2)
@@ -151,7 +152,7 @@ tiles : Player -> Float -> { camera | x : Float, y : Float } -> Float -> Float -
 tiles p timeMs camera cameraWidth cameraHeight =
     let
         ( px, py ) =
-            Player.lerpPosition timeMs p
+            Player.position Constants.playerEasing timeMs p
 
         player : Renderer.Tile
         player =

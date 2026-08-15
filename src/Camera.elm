@@ -29,6 +29,7 @@ module Camera exposing
 
 -}
 
+import Constants
 import Map
 import Math.Matrix4 as Mat4 exposing (Mat4)
 import Player exposing (Player)
@@ -67,7 +68,7 @@ centeredAt : Player -> Float -> Camera
 centeredAt p timeMs =
     let
         ( x, y ) =
-            Player.lerpPosition timeMs p
+            Player.position Constants.cameraEasing timeMs p
     in
     { x = x - halfWidth
     , y = y - halfHeight
