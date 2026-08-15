@@ -1,4 +1,4 @@
-![Screenshot](https://github.com/Janiczek/rpg2d/raw/main/screenshot.png)
+[![Screenshot](https://github.com/Janiczek/rpg2d/raw/main/screenshot.png) - click for video](https://github.com/Janiczek/rpg2d/raw/main/video.mp4)
 
 ## Todo:
 
